@@ -22,7 +22,7 @@
       <!-- Auth Form -->
       <div class="bg-white/90 backdrop-blur-md p-20 rounded-2xl shadow-2xl w-full space-y-8">
         <h2 class="text-4xl font-semibold mb-20 text-center">Welcome Back</h2>
-        <FormAuth @child-action="handleLogin" :form="form" :isLoading="isLoading" />
+        <FormAuth @child-action="handleLogin" @password-reset="handlePasswordReset" :form="form" :isLoading="isLoading" />
       </div>
     </div>
 
