@@ -31,6 +31,8 @@ interface AuthError {
 export const useAuth = () => {
   const config = useRuntimeConfig()
   const apiBase = config.public.API_LINK
+  const { success, error: showError } = useToast()
+  
   const user = useState<null | { id: number; email: string; name: string; role: string }>('auth.user', () => null)
   const accessToken = useState<string | null>('auth.accessToken', () => null)
   const refreshToken = useState<string | null>('auth.refreshToken', () => null)
@@ -114,10 +116,12 @@ export const useAuth = () => {
       accessTokenCookie.value = response.access
       refreshTokenCookie.value = response.refresh
 
+      success('Welcome back!', 'You have been successfully logged in.')
       return response
     } catch (apiError: any) {
       const errorMessage = handleApiError(apiError, 'Login failed')
       error.value = errorMessage
+      showError('Login Failed', errorMessage)
       throw new Error(errorMessage)
     } finally {
       isLoading.value = false
