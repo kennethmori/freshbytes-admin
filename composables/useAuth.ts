@@ -1,4 +1,3 @@
-// Define types for API responses
 interface LoginResponse {
   access: string
   refresh: string
@@ -23,6 +22,12 @@ interface ResetPasswordResponse {
   }
 }
 
+interface AuthError {
+  detail?: string
+  message?: string
+  [key: string]: any
+}
+
 export const useAuth = () => {
   const config = useRuntimeConfig()
   const apiBase = config.public.API_LINK
@@ -30,6 +35,15 @@ export const useAuth = () => {
   const accessToken = useState<string | null>('auth.accessToken', () => null)
   const refreshToken = useState<string | null>('auth.refreshToken', () => null)
   const isLoading = ref(false)
+  const error = ref<string | null>(null)
+
+  // Helper function to handle API errors
+  const handleApiError = (error: any, defaultMessage: string): string => {
+    if (error.data) {
+      return error.data.detail || error.data.message || error.data.error || defaultMessage
+    }
+    return error.message || defaultMessage
+  }
 
   // Internal setters for plugins
   const setAccessToken = (newToken: string | null) => {
@@ -46,9 +60,9 @@ export const useAuth = () => {
 
   const login = async (credentials: { email: string; password: string }) => {
     isLoading.value = true
-    try {
-      console.log('Sending login request:', credentials) // Debug log
+    error.value = null
 
+    try {
       const response = await $fetch<LoginResponse>(`${apiBase}/api/auth/login/`, {
         method: 'POST',
         headers: {
@@ -59,8 +73,6 @@ export const useAuth = () => {
           password: credentials.password
         }
       })
-
-      console.log('Login response:', response) // Debug log
 
       // Store tokens
       accessToken.value = response.access
@@ -80,6 +92,7 @@ export const useAuth = () => {
           user.value = userData
         } catch (userError) {
           console.error('Failed to fetch user data:', userError)
+          // Don't throw here, login was successful even if user fetch failed
         }
       }
 
@@ -102,9 +115,10 @@ export const useAuth = () => {
       refreshTokenCookie.value = response.refresh
 
       return response
-    } catch (error: any) {
-      console.error('Login error:', error) // Debug log
-      throw new Error(error.data?.detail || error.data?.message || 'Login failed')
+    } catch (apiError: any) {
+      const errorMessage = handleApiError(apiError, 'Login failed')
+      error.value = errorMessage
+      throw new Error(errorMessage)
     } finally {
       isLoading.value = false
     }
@@ -177,6 +191,31 @@ export const useAuth = () => {
     return response.data
   }
 
+  const changePassword = async (currentPassword: string, newPassword: string) => {
+    isLoading.value = true
+    error.value = null
+
+    try {
+      await $fetch(`${apiBase}/api/auth/change-password/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken.value}`
+        },
+        body: {
+          current_password: currentPassword,
+          new_password: newPassword
+        }
+      })
+    } catch (apiError: any) {
+      const errorMessage = handleApiError(apiError, 'Failed to change password')
+      error.value = errorMessage
+      throw new Error(errorMessage)
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   const isLoggedIn = computed(() => !!user.value && !!accessToken.value)
   const register = async ({
     email,
@@ -194,6 +233,7 @@ export const useAuth = () => {
     user_phone: string
   }) => {
     isLoading.value = true
+    error.value = null
 
     try {
       await $fetch(`${apiBase}/api/auth/register/`, {
@@ -210,9 +250,10 @@ export const useAuth = () => {
           user_phone
         },
       })
-    } catch (error: any) {
-      console.error('Registration error:', error)
-      throw new Error(error.data?.detail || error.data?.message || 'Registration failed')
+    } catch (apiError: any) {
+      const errorMessage = handleApiError(apiError, 'Registration failed')
+      error.value = errorMessage
+      throw new Error(errorMessage)
     } finally {
       isLoading.value = false
     }
@@ -223,13 +264,14 @@ export const useAuth = () => {
     accessToken: readonly(accessToken),
     refreshToken: readonly(refreshToken),
     isLoading: readonly(isLoading),
+    error: readonly(error),
     isLoggedIn,
     login,
     logout,
     resetPassword,
     refreshAccessToken,
-    // 🆕 Add this:
     register,
+    changePassword,
     // Internal setters (use cautiously)
     setAccessToken,
     setRefreshToken,

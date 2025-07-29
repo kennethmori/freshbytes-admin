@@ -42,7 +42,7 @@
 
     </div>
     <div class="text-center justify-between text-sm">
-        <button @click="handlePasswordReset" class=" text-emerald-700 hover:underline" :disabled="isLoading">
+        <button @click="handlePasswordReset" class="text-emerald-700 hover:underline" :disabled="isLoading">
             Forgot Password?
         </button>
     </div>
@@ -61,11 +61,13 @@ const props = defineProps({
     }
 })
 
-const emit = defineEmits(['child-action'])
+const emit = defineEmits(['child-action', 'password-reset'])
 
 const triggerAction = () => {
     emit('child-action');
 }
 
-
+const handlePasswordReset = () => {
+    emit('password-reset');
+}
 </script>
